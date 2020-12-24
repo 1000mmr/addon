@@ -151,7 +151,7 @@ class SearchWindow(xbmcgui.WindowXMLDialog):
             year = result.get('release_date', '')
             rating = str(result.get('vote_average', ''))
 
-            new_item = Item(channel='search',
+            new_item = Item(channel='globalsearch',
                             action=True,
                             title=title,
                             thumbnail=thumbnail,
@@ -397,7 +397,8 @@ class SearchWindow(xbmcgui.WindowXMLDialog):
                 for result in results:
                     resultsList += result.tourl() + '|'
                 item.setProperty('items',resultsList)
-                self.channels[int(self.results[name])].setProperty('results', str(len(resultsList).split('|') - 1))
+                logger.log(self.channels[int(self.results[name])])
+                self.channels[int(self.results[name])].setProperty('results', str(len(resultsList.split('|')) - 1))
             pos = self.CHANNELS.getSelectedPosition()
             self.CHANNELS.reset()
             self.CHANNELS.addItems(self.channels)
@@ -593,7 +594,7 @@ class SearchWindow(xbmcgui.WindowXMLDialog):
                     busy(False)
                     return
 
-                if item.action not in ['findvideos', 'episodios']:  # special items (add to videolibrary, download ecc.)
+                if item.action in ['add_pelicula_to_library', 'add_serie_to_library','save_download']:  # special items (add to videolibrary, download ecc.)
                     xbmc.executebuiltin("RunPlugin(plugin://plugin.video.kod/?" + item_url + ")")
                     busy(False)
                     return
@@ -732,7 +733,6 @@ class SearchWindow(xbmcgui.WindowXMLDialog):
             parent = self.item
         item = Item().fromurl(item_url)
         parent.noMainMenu = True
-
         commands = platformtools.set_context_commands(item, item_url, parent)
         context = [c[0] for c in commands]
         context_commands = [c[1].replace('Container.Refresh', 'RunPlugin').replace('Container.Update', 'RunPlugin') for c in commands]
@@ -742,12 +742,13 @@ class SearchWindow(xbmcgui.WindowXMLDialog):
 
     def playmonitor(self, server=None):
         if server:
+            platformtools.prevent_busy(server)
             server.window = True
             server.globalsearch = True
-            platformtools.prevent_busy(server)
-            run(server)
+            Thread(target=run, args=[server]).start()
+            # run(server)
         try:
-            while not xbmc.Player().getTime() > 0:
+            while not platformtools.is_playing() or not xbmc.Player().getTime() > 0:
                 xbmc.sleep(500)
             self.close()
             xbmc.sleep(500)
