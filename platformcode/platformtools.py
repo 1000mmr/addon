@@ -22,15 +22,15 @@ from core.item import Item
 from platformcode import logger, config
 
 addon = config.__settings__
-addon_icon = os.path.join( addon.getAddonInfo( "path" ), "logo.png" )
+addon_icon = os.path.join( addon.getAddonInfo( "path" ),'resources', 'media', "logo.png" )
 
-class XBMCPlayer(xbmc.Player):
+# class XBMCPlayer(xbmc.Player):
 
-    def __init__(self, *args):
-        pass
+#     def __init__(self, *args):
+#         pass
 
 
-xbmc_player = XBMCPlayer()
+xbmc_player = xbmc.Player()
 
 
 def dialog_ok(heading, message):
@@ -41,7 +41,7 @@ def dialog_ok(heading, message):
 def dialog_notification(heading, message, icon=3, time=5000, sound=True):
     dialog = xbmcgui.Dialog()
     try:
-        l_icono = xbmcgui.NOTIFICATION_INFO, xbmcgui.NOTIFICATION_WARNING, xbmcgui.NOTIFICATION_ERROR, addon_icon
+        l_icono = [xbmcgui.NOTIFICATION_INFO, xbmcgui.NOTIFICATION_WARNING, xbmcgui.NOTIFICATION_ERROR, addon_icon]
         dialog.notification(heading, message, l_icono[icon], time, sound)
     except:
         dialog_ok(heading, message)
@@ -161,7 +161,7 @@ def dialog_register(heading, user=False, email=False, password=False, user_defau
             if height < 250: height = 250
             self.getControl(10000).setHeight(height)
             self.getControl(10001).setHeight(height)
-            self.getControl(10000).setPosition(255, (720 - height) / 2)
+            self.getControl(10000).setPosition(255, old_div(720 - height, 2))
             self.setFocusId(30000)
 
         def onClick(self, control):
@@ -672,7 +672,7 @@ def play_video(item, strm=False, force_direct=False, autoplay=False):
     if mpd:
         if not install_inputstream():
             return
-        xlistitem.setProperty('inputstreamaddon', 'inputstream.adaptive')
+        xlistitem.setProperty('inputstream' if PY3 else 'inputstreamaddon', 'inputstream.adaptive')
         xlistitem.setProperty('inputstream.adaptive.manifest_type', 'mpd')
         if item.drm and item.license:
             install_widevine()
@@ -1037,14 +1037,18 @@ def set_player(item, xlistitem, mediaurl, view, strm):
 
         if player_mode in [0,1]:
             prevent_busy(item)
-            logger.info('Player Mode:' + ['Direct', 'Bookmark'][player_mode])
+            if player_mode in [1]:
+                item.played_time = resume_playback(get_played_time(item))
+                item.options['continue'] = True
+
+            logger.info('Player Mode:',['Direct', 'Bookmark'][player_mode])
             # Add the listitem to a playlist
             playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
             playlist.clear()
             playlist.add(mediaurl, xlistitem)
             # Reproduce
             xbmc_player.play(playlist, xlistitem)
-            # viewed(item, played_time)
+
             if config.get_setting('trakt_sync'):
                 from core import trakt_tools
                 trakt_tools.wait_for_update_trakt()
@@ -1067,7 +1071,7 @@ def set_player(item, xlistitem, mediaurl, view, strm):
 
     # if it is a video library file send to mark as seen
     if strm or item.strm_path: item.options['strm'] = True
-    if player_mode == 1: item.options['continue'] = True
+    # if player_mode == 1: item.options['continue'] = True
     from platformcode import xbmc_videolibrary
     xbmc_videolibrary.mark_auto_as_watched(item)
 
@@ -1110,9 +1114,7 @@ def play_torrent(item, xlistitem, mediaurl):
         selection = 0
 
     if selection >= 0:
-
-        xbmcplugin.setResolvedUrl(int(sys.argv[1]), False, xlistitem)
-        time.sleep(1)
+        prevent_busy(item)
 
         mediaurl = urllib.quote_plus(item.url)
         torr_client = torrent_options[selection][0]
@@ -1131,8 +1133,9 @@ def play_torrent(item, xlistitem, mediaurl):
 
             torrent.mark_auto_as_watched(item)
 
-            while is_playing() and not xbmc.Monitor().abortRequested():
-                time.sleep(3)
+            if not item.globalsearch:
+                while is_playing() and not xbmc.Monitor().abortRequested():
+                    time.sleep(3)
 
 
 def resume_playback(played_time):
