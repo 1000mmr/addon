@@ -1,0 +1,11 @@
+{
+    "id": "1337xto",
+    "name": "1337Xto",
+    "active": true,
+    "language": ["ita"],
+    "thumbnail": "https://cdn.aelieve.com/toptere/1337X.To_.jpg",
+    "banner": "https://cdn.aelieve.com/toptere/1337X.To_.jpg",
+    "categories": ["movie", "tvshow", "torrent"],
+    "not_active": ["include_in_newest"],
+    "settings": []
+}
