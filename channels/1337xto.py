@@ -49,4 +49,4 @@ def peliculas(item):
 def findvideos(item):
     if item.contentType == 'tvshow': item.contentType = 'episode'
     Videolibrary = False
-    return support.server(item, support.match(item.url, patron=r'(magnet[^"]+)"').match, Videolibrary=Videolibrary)
+    return support.server(item, support.match(item.url, patron=r'(magnet[^"]+)"').match, Videolibrary=Videolibrary,AutoPlay=False)
